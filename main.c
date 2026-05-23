@@ -13,8 +13,9 @@ DBusError error;
 char* output = "eDP-1"; // Default output device
 int rotate_master_layout = 0; // Default layout
 int orientation_map[4] = {0,1,2,3};
-char flip_bottom_up = 0; //Default orientation is not flipped 
+char flip_bottom_up = 0; //Default orientation is not flipped
 char isRotationUnlocked = 1; //Default rotation is unlocked
+char landscape_only = 0; // If 1, ignore 90° (LeftUp/RightUp) orientations
 enum Orientation last_handled_orientation = Undefined;
 
 void dbus_disconnect(DBusConnection* connection) {
@@ -110,6 +111,8 @@ void handle_lock_rotation(int sig){
 
 void handle_orientation(enum Orientation orientation, const char* monitor_id) {
     if (orientation == Undefined || orientation == last_handled_orientation || !isRotationUnlocked)
+        return;
+    if (landscape_only && (orientation == LeftUp || orientation == RightUp))
         return;
     int orientation_transform = orientation_map[orientation];
     // Ran if the --either --left-master or --right-master is pass in
@@ -280,7 +283,10 @@ int main(int argc, char* argv[]) {
 	}
 	else if(strcmp(argv[i], "--transform") == 0) {
           parse_transform(argv[++i]);
-	}	       	
+	}
+        else if (strcmp(argv[i], "--landscape-only") == 0) {
+            landscape_only = 1; // Ignore 90° (LeftUp/RightUp) orientations
+        }
         else {
             output = argv[i];
         }
