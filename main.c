@@ -80,13 +80,29 @@ enum Orientation parse_orientation_signal(DBusMessage* msg) {
 }
 
 void system_fmt(char* format, ...) {
-    char command[420];
+    char command[1024];
     va_list args;
     va_start(args, format);
     vsnprintf(command, sizeof(command), format, args);
     system(command);
     va_end(args);
 }
+
+// Hyprland >= 0.55 rejects `hyprctl keyword <key>` for monitor/input keys
+// when the non-legacy (Lua) parser is active, with the error:
+//   "keyword can't work with non-legacy parsers. Use eval."
+// To stay compatible with both parsers we emit BOTH forms inside one
+// --batch; whichever the running Hyprland accepts wins, the other errors
+// silently and the batch continues. The trailing `keyword workspace ...`
+// layoutopt clause has no Lua equivalent in hl.workspace_rule today, so
+// it is emitted only as the legacy form (still works on legacy parsers).
+#define HL_BATCH_BASE \
+    "keyword monitor %s,transform,%d ; " \
+    "eval hl.monitor({output='%s', transform=%d}) ; " \
+    "keyword input:touchdevice:transform %d ; " \
+    "eval hl.config({input={touchdevice={transform=%d}}}) ; " \
+    "keyword input:tablet:transform %d ; " \
+    "eval hl.config({input={tablet={transform=%d}}})"
 
 void handle_lock_rotation(int sig){
 	isRotationUnlocked ^= 1;
@@ -98,38 +114,28 @@ void handle_orientation(enum Orientation orientation, const char* monitor_id) {
     int orientation_transform = orientation_map[orientation];
     // Ran if the --either --left-master or --right-master is pass in
     // (pray that our lord and savior vaxry won't change hyprctl output)
-    if (rotate_master_layout == 1) {
-        if (orientation == Normal) { // --left-master flag
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:left\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else if (orientation == LeftUp) {
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:top\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else if (orientation == BottomUp) {
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:left\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else { // This covers RightUp orientation
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:top\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
+    if (rotate_master_layout == 1) { // --left-master flag
+        const char* dir = (orientation == LeftUp || orientation == RightUp) ? "top" : "left";
+        system_fmt("hyprctl --batch \"" HL_BATCH_BASE " ; keyword workspace m[%s], layoutopt:orientation:%s\"",
+                   output, orientation_transform, output, orientation_transform,
+                   orientation_transform, orientation_transform,
+                   orientation_transform, orientation_transform,
+                   monitor_id, dir);
     }
     else if (rotate_master_layout == 2) { // --right-master flag
-        if (orientation == Normal) {
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:right\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else if (orientation == LeftUp) {
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:bottom\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else if (orientation == BottomUp) {
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:right\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
-        else { // This covers RightUp orientation
-            system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d ; keyword workspace m[%s], layoutopt:orientation:bottom\"", output, orientation_transform, orientation_transform, orientation_transform, monitor_id);
-        }
+        const char* dir = (orientation == LeftUp || orientation == RightUp) ? "bottom" : "right";
+        system_fmt("hyprctl --batch \"" HL_BATCH_BASE " ; keyword workspace m[%s], layoutopt:orientation:%s\"",
+                   output, orientation_transform, output, orientation_transform,
+                   orientation_transform, orientation_transform,
+                   orientation_transform, orientation_transform,
+                   monitor_id, dir);
     }
     else {
-        // Rotates monitor and touch device without changing layout if the --rotate-flag-layout flag is not passed
-        system_fmt("hyprctl --batch \"keyword monitor %s,transform,%d ; keyword input:touchdevice:transform %d ; keyword input:tablet:transform %d\"", output, orientation_transform, orientation_transform, orientation_transform);
-
+        // Rotates monitor and touch device without changing layout
+        system_fmt("hyprctl --batch \"" HL_BATCH_BASE "\"",
+                   output, orientation_transform, output, orientation_transform,
+                   orientation_transform, orientation_transform,
+                   orientation_transform, orientation_transform);
     }
 
     last_handled_orientation = orientation;
