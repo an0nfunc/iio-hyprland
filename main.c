@@ -105,8 +105,9 @@ void system_fmt(char* format, ...) {
     "keyword input:tablet:transform %d ; " \
     "eval hl.config({input={tablet={transform=%d}}})"
 
-void handle_lock_rotation(int sig){
-	isRotationUnlocked ^= 1;
+void handle_lock_rotation(int sig) {
+    (void)sig;
+    isRotationUnlocked ^= 1;
 }
 
 void handle_orientation(enum Orientation orientation, const char* monitor_id) {
