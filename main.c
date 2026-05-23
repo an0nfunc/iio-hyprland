@@ -279,12 +279,12 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "--right-master") == 0) {
             rotate_master_layout = 2; // Enable rotate-layout if flag is found
         }
-	else if (strcmp(argv[i], "--flip-bottom-up") ==0){
-	    flip_bottom_up = 1; //Swap bottomUp / Normal orientation
-	}
-	else if(strcmp(argv[i], "--transform") == 0) {
-          parse_transform(argv[++i]);
-	}
+        else if (strcmp(argv[i], "--flip-bottom-up") == 0) {
+            flip_bottom_up = 1; // Swap bottomUp / Normal orientation
+        }
+        else if (strcmp(argv[i], "--transform") == 0) {
+            parse_transform(argv[++i]);
+        }
         else if (strcmp(argv[i], "--landscape-only") == 0) {
             landscape_only = 1; // Ignore 90° (LeftUp/RightUp) orientations
         }
