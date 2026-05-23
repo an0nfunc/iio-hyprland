@@ -118,16 +118,11 @@ void handle_orientation(enum Orientation orientation, const char* monitor_id) {
     int orientation_transform = orientation_map[orientation];
     // Ran if the --either --left-master or --right-master is pass in
     // (pray that our lord and savior vaxry won't change hyprctl output)
-    if (rotate_master_layout == 1) { // --left-master flag
-        const char* dir = (orientation == LeftUp || orientation == RightUp) ? "top" : "left";
-        system_fmt("hyprctl --batch \"" HL_BATCH_BASE " ; keyword workspace m[%s], layoutopt:orientation:%s\"",
-                   output, orientation_transform, output, orientation_transform,
-                   orientation_transform, orientation_transform,
-                   orientation_transform, orientation_transform,
-                   monitor_id, dir);
-    }
-    else if (rotate_master_layout == 2) { // --right-master flag
-        const char* dir = (orientation == LeftUp || orientation == RightUp) ? "bottom" : "right";
+    if (rotate_master_layout == 1 || rotate_master_layout == 2) {
+        int sideways = (orientation == LeftUp || orientation == RightUp);
+        const char* dir = (rotate_master_layout == 1)
+            ? (sideways ? "top"    : "left")   // --left-master
+            : (sideways ? "bottom" : "right"); // --right-master
         system_fmt("hyprctl --batch \"" HL_BATCH_BASE " ; keyword workspace m[%s], layoutopt:orientation:%s\"",
                    output, orientation_transform, output, orientation_transform,
                    orientation_transform, orientation_transform,
