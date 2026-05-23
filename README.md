@@ -61,7 +61,9 @@ sudo make uninstall
 ```
 
 ## Running
-`iio-hyprland [master window location] [monitor to rotate, default=eDP-1]`, run `hyprctl monitors` to list available outputs. Use either `--left-master` or `--right-master` to set the master window location to the left/top or right/bottom, leave blank to not adjust window layout on rotate. 
+`iio-hyprland [master window location] [monitor to rotate, default=eDP-1]`, run `hyprctl monitors` to list available outputs. Use either `--left-master` or `--right-master` to set the master window location to the left/top or right/bottom, leave blank to not adjust window layout on rotate.
+
+Add `--landscape-only` to ignore 90° (LeftUp / RightUp) orientations and only toggle between normal and 180°-flipped — useful on convertibles that are never used in portrait. Example: `exec-once = iio-hyprland --landscape-only`.
 
 Add `exec-once = iio-hyprland` to `~/.config/hypr/hyprland.conf`
 
